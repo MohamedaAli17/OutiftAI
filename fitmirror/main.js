@@ -74,6 +74,43 @@
       });
   }
 
+  function finishOutfitPreload(loadedOutfits, loadedImages, failedSources) {
+    if (outfitsAllLoaded) {
+      return;
+    }
+    outfits = loadedOutfits;
+    outfitImages = loadedImages;
+    currentOutfitIndex = 0;
+    outfitsAllLoaded = true;
+
+    if (failedSources.length > 0) {
+      console.warn(
+        "Skipped missing or invalid outfit file(s):",
+        failedSources.join(", ")
+      );
+    }
+
+    if (outfits.length === 0) {
+      if (outfitNameEl) {
+        outfitNameEl.textContent = "No outfits";
+      }
+      statusEl.textContent =
+        "Camera active — add .png/.jpg images to outfits/ and refresh";
+    } else {
+      updateOutfitLabel();
+      if (failedSources.length > 0) {
+        statusEl.textContent =
+          "FitMirror — " +
+          outfits.length +
+          " outfit(s) loaded (" +
+          failedSources.length +
+          " skipped)";
+      }
+    }
+
+    tryStartAnimationLoop();
+  }
+
   function preloadOutfits() {
     outfitImages = [];
     outfitLoadCount = 0;
@@ -81,36 +118,46 @@
 
     if (outfits.length === 0) {
       console.log("No outfit images found in outfits/");
-      if (outfitNameEl) {
-        outfitNameEl.textContent = "No outfits";
-      }
-      outfitsAllLoaded = true;
-      tryStartAnimationLoop();
+      finishOutfitPreload([], [], []);
       return;
     }
 
-    updateOutfitLabel();
+    var loadedOutfits = [];
+    var loadedImages = [];
+    var failedSources = [];
+    var pending = outfits.length;
 
     for (var i = 0; i < outfits.length; i++) {
       (function (index) {
         var img = new Image();
         img.onload = function () {
-          outfitLoadCount += 1;
           console.log("Outfit image loaded:", outfits[index].name);
-          if (outfitLoadCount === outfits.length) {
-            outfitsAllLoaded = true;
-            tryStartAnimationLoop();
+          loadedOutfits.push(outfits[index]);
+          loadedImages.push(img);
+          pending -= 1;
+          if (pending === 0) {
+            finishOutfitPreload(loadedOutfits, loadedImages, failedSources);
           }
         };
         img.onerror = function () {
           console.error("Outfit image failed to load:", outfits[index].src);
-          statusEl.textContent =
-            "Outfit error: could not load " + outfits[index].src;
+          failedSources.push(outfits[index].src);
+          pending -= 1;
+          if (pending === 0) {
+            finishOutfitPreload(loadedOutfits, loadedImages, failedSources);
+          }
         };
         img.src = outfits[index].src;
-        outfitImages[index] = img;
       })(i);
     }
+
+    // Safety: never block the camera if images hang
+    setTimeout(function () {
+      if (!outfitsAllLoaded) {
+        console.warn("Outfit preload timed out — starting camera anyway");
+        finishOutfitPreload(loadedOutfits, loadedImages, failedSources);
+      }
+    }, 12000);
   }
 
   function startOutfitDiscovery() {
@@ -128,8 +175,14 @@
       })
       .catch(function (err) {
         console.error("Outfit discovery failed:", err);
+        outfits = [];
+        outfitsAllLoaded = true;
+        if (outfitNameEl) {
+          outfitNameEl.textContent = "No outfits";
+        }
         statusEl.textContent =
-          "Outfit error: add PNGs to outfits/ and run: py -m uvicorn main:app --reload --port 8000 (from backend/)";
+          "Camera starting — drop images in outfits/, run backend, then refresh";
+        tryStartAnimationLoop();
       });
   }
 
@@ -276,7 +329,9 @@
       return;
     }
     loopStarted = true;
-    statusEl.textContent = "FitMirror — tracking active";
+    if (outfits.length > 0) {
+      statusEl.textContent = "FitMirror — tracking active";
+    }
     requestAnimationFrame(drawFrame);
   }
 
