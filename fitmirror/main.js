@@ -6,8 +6,23 @@
   var firstFrameLogged = false;
   var poseLandmarker = null;
   var poseApi = null;
+  var overlayApi = null;
   var videoMetaReady = false;
+  var outfitLoaded = false;
   var loopStarted = false;
+
+  var outfitImg = new Image();
+  outfitImg.onload = function () {
+    outfitLoaded = true;
+    console.log("Outfit image loaded");
+    tryStartAnimationLoop();
+  };
+  outfitImg.onerror = function () {
+    console.error("Outfit image failed to load");
+    statusEl.textContent =
+      "Outfit error: could not load outfits/tshirt.png";
+  };
+  outfitImg.src = "outfits/tshirt.png";
 
   // Debug shoulder/hip indices (BlazePose)
   var DEBUG_LANDMARKS = [11, 12, 23, 24];
@@ -41,6 +56,15 @@
           performance.now()
         );
         if (landmarks) {
+          if (overlayApi) {
+            overlayApi.drawOutfit(
+              ctx,
+              landmarks,
+              outfitImg,
+              canvas.width,
+              canvas.height
+            );
+          }
           drawDebugDots(landmarks);
         }
       }
@@ -49,10 +73,16 @@
   }
 
   function tryStartAnimationLoop() {
-    if (loopStarted || !videoMetaReady || !poseLandmarker) {
+    if (
+      loopStarted ||
+      !videoMetaReady ||
+      !poseLandmarker ||
+      !outfitLoaded
+    ) {
       return;
     }
     loopStarted = true;
+    statusEl.textContent = "FitMirror — tracking active";
     requestAnimationFrame(drawFrame);
   }
 
@@ -62,7 +92,7 @@
       .then(function (stream) {
         video.srcObject = stream;
         console.log("Camera started");
-        statusEl.textContent = "FitMirror — pose loading...";
+        statusEl.textContent = "FitMirror — loading pose & outfit...";
 
         video.addEventListener("loadedmetadata", function onMeta() {
           video.removeEventListener("loadedmetadata", onMeta);
@@ -79,6 +109,10 @@
       });
   }
 
+  import("./overlay.js").then(function (overlayModule) {
+    overlayApi = overlayModule;
+  });
+
   import("./pose.js")
     .then(function (poseModule) {
       poseApi = poseModule;
@@ -86,14 +120,13 @@
     })
     .then(function (landmarker) {
       poseLandmarker = landmarker;
-      statusEl.textContent = "FitMirror — tracking active";
       tryStartAnimationLoop();
     })
     .catch(function (err) {
       console.error("Pose init failed:", err);
       statusEl.textContent =
         "Pose error: " + (err.message || "Could not load pose model");
-      if (videoMetaReady) {
+      if (videoMetaReady && outfitLoaded) {
         loopStarted = true;
         requestAnimationFrame(drawFrame);
       }
