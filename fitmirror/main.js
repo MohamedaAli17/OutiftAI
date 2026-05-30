@@ -6,22 +6,33 @@
   var video = document.getElementById("webcam-video");
   var statusEl = document.querySelector("#ui-overlay p");
   var outfitNameEl = document.getElementById("outfit-name");
+  var trouserNameEl = document.getElementById("trouser-name");
   var ctx = canvas.getContext("2d");
   var firstFrameLogged = false;
   var poseLandmarker = null;
   var poseApi = null;
   var overlayApi = null;
   var videoMetaReady = false;
-  var outfitsAllLoaded = false;
-  var outfitLoadCount = 0;
+  var outfitPreloadDone = false;
+  var trouserPreloadDone = false;
   var loopStarted = false;
   var scaleFactor = 1.5;
   var offsetX = 0;
   var offsetY = 0;
   var currentOutfitIndex = 0;
+  var trouserOffsetX = 0;
+  var trouserOffsetY = 0;
+  var trouserScale = 1.6;
+  var currentTrouserIndex = 0;
 
   var outfits = [];
   var outfitImages = [];
+  var trouserOutfits = [{ name: "Jeans", src: "outfits/jeans.png" }];
+  var trouserImages = [];
+
+  function checkAllAssetsReady() {
+    tryStartAnimationLoop();
+  }
 
   function nameFromFilename(filename) {
     var base = filename.replace(/\.[^.]+$/, "");
@@ -136,13 +147,13 @@
   }
 
   function finishOutfitPreload(loadedOutfits, loadedImages, failedSources) {
-    if (outfitsAllLoaded) {
+    if (outfitPreloadDone) {
       return;
     }
     outfits = loadedOutfits;
     outfitImages = loadedImages;
     currentOutfitIndex = 0;
-    outfitsAllLoaded = true;
+    outfitPreloadDone = true;
 
     if (failedSources.length > 0) {
       console.warn(
@@ -169,13 +180,82 @@
       }
     }
 
-    tryStartAnimationLoop();
+    checkAllAssetsReady();
+  }
+
+  function finishTrouserPreload(loadedTrousers, loadedImages, failedSources) {
+    if (trouserPreloadDone) {
+      return;
+    }
+    trouserOutfits = loadedTrousers;
+    trouserImages = loadedImages;
+    currentTrouserIndex = 0;
+    trouserPreloadDone = true;
+
+    if (failedSources.length > 0) {
+      console.warn(
+        "Skipped missing or invalid trouser file(s):",
+        failedSources.join(", ")
+      );
+    }
+
+    updateTrouserLabel();
+    checkAllAssetsReady();
+  }
+
+  function preloadTrousers() {
+    trouserImages = [];
+    trouserPreloadDone = false;
+
+    if (trouserOutfits.length === 0) {
+      console.log("No trouser images configured");
+      finishTrouserPreload([], [], []);
+      return;
+    }
+
+    var loadedTrousers = [];
+    var loadedImages = [];
+    var failedSources = [];
+    var pending = trouserOutfits.length;
+
+    for (var t = 0; t < trouserOutfits.length; t++) {
+      (function (index) {
+        var img = new Image();
+        img.onload = function () {
+          console.log("Trouser image loaded:", trouserOutfits[index].name);
+          loadedTrousers.push(trouserOutfits[index]);
+          loadedImages.push(img);
+          pending -= 1;
+          if (pending === 0) {
+            finishTrouserPreload(loadedTrousers, loadedImages, failedSources);
+          }
+        };
+        img.onerror = function () {
+          console.error(
+            "Trouser image failed to load:",
+            trouserOutfits[index].src
+          );
+          failedSources.push(trouserOutfits[index].src);
+          pending -= 1;
+          if (pending === 0) {
+            finishTrouserPreload(loadedTrousers, loadedImages, failedSources);
+          }
+        };
+        img.src = outfitImageUrl(trouserOutfits[index].src);
+      })(t);
+    }
+
+    setTimeout(function () {
+      if (!trouserPreloadDone) {
+        console.warn("Trouser preload timed out — continuing anyway");
+        finishTrouserPreload(loadedTrousers, loadedImages, failedSources);
+      }
+    }, 12000);
   }
 
   function preloadOutfits() {
     outfitImages = [];
-    outfitLoadCount = 0;
-    outfitsAllLoaded = false;
+    outfitPreloadDone = false;
 
     if (outfits.length === 0) {
       console.log("No outfit images found in outfits/");
@@ -214,7 +294,7 @@
 
     // Safety: never block the camera if images hang
     setTimeout(function () {
-      if (!outfitsAllLoaded) {
+      if (!outfitPreloadDone) {
         console.warn("Outfit preload timed out — starting camera anyway");
         finishOutfitPreload(loadedOutfits, loadedImages, failedSources);
       }
@@ -237,13 +317,13 @@
       .catch(function (err) {
         console.error("Outfit discovery failed:", err);
         outfits = [];
-        outfitsAllLoaded = true;
+        outfitPreloadDone = true;
         if (outfitNameEl) {
           outfitNameEl.textContent = "No outfits";
         }
         statusEl.textContent =
           "Camera on — double-click START-FitMirror.bat to auto-detect outfits";
-        tryStartAnimationLoop();
+        checkAllAssetsReady();
       });
   }
 
@@ -328,6 +408,86 @@
     }
   };
 
+  function resetTrouserAdjustments() {
+    trouserOffsetX = 0;
+    trouserOffsetY = 0;
+    trouserScale = 1.6;
+  }
+
+  function updateTrouserLabel() {
+    if (!trouserNameEl) {
+      return;
+    }
+    if (trouserOutfits.length === 0) {
+      trouserNameEl.textContent = "No trousers";
+      return;
+    }
+    trouserNameEl.textContent = trouserOutfits[currentTrouserIndex].name;
+  }
+
+  function logTrouserSwitch() {
+    console.log("Switched to trouser:", trouserOutfits[currentTrouserIndex].name);
+  }
+
+  function logTrouserOffset() {
+    console.log("Trouser offset:", trouserOffsetX, trouserOffsetY);
+  }
+
+  function changeTrouserScale(delta) {
+    trouserScale = Math.min(3.0, Math.max(0.5, trouserScale + delta));
+    console.log("Trouser scale:", trouserScale);
+  }
+
+  window.nextTrouser = function () {
+    if (trouserOutfits.length === 0) {
+      return;
+    }
+    currentTrouserIndex =
+      (currentTrouserIndex + 1) % trouserOutfits.length;
+    resetTrouserAdjustments();
+    updateTrouserLabel();
+    logTrouserSwitch();
+  };
+
+  window.prevTrouser = function () {
+    if (trouserOutfits.length === 0) {
+      return;
+    }
+    currentTrouserIndex =
+      (currentTrouserIndex - 1 + trouserOutfits.length) %
+      trouserOutfits.length;
+    resetTrouserAdjustments();
+    updateTrouserLabel();
+    logTrouserSwitch();
+  };
+
+  window.moveTrouser = function (direction) {
+    if (direction === "up") {
+      trouserOffsetY -= 5;
+    } else if (direction === "down") {
+      trouserOffsetY += 5;
+    } else if (direction === "left") {
+      trouserOffsetX -= 5;
+    } else if (direction === "right") {
+      trouserOffsetX += 5;
+    }
+    logTrouserOffset();
+  };
+
+  window.resetTrouser = function () {
+    resetTrouserAdjustments();
+    console.log("Trouser scale:", trouserScale);
+    logTrouserOffset();
+  };
+
+  window.scaleTrouser = function (direction) {
+    if (direction === "up") {
+      changeTrouserScale(0.05);
+    } else if (direction === "down") {
+      changeTrouserScale(-0.05);
+    }
+  };
+
   function drawDebugDots(landmarks) {
     ctx.fillStyle = "red";
     for (var i = 0; i < DEBUG_LANDMARKS.length; i++) {
@@ -373,6 +533,22 @@
               offsetY
             );
           }
+          if (
+            overlayApi &&
+            trouserOutfits.length > 0 &&
+            trouserImages[currentTrouserIndex]
+          ) {
+            overlayApi.drawTrousers(
+              ctx,
+              landmarks,
+              trouserImages[currentTrouserIndex],
+              canvas.width,
+              canvas.height,
+              trouserOffsetX,
+              trouserOffsetY,
+              trouserScale
+            );
+          }
           drawDebugDots(landmarks);
         }
       }
@@ -385,7 +561,8 @@
       loopStarted ||
       !videoMetaReady ||
       !poseLandmarker ||
-      !outfitsAllLoaded
+      !outfitPreloadDone ||
+      !trouserPreloadDone
     ) {
       return;
     }
@@ -436,7 +613,7 @@
       console.error("Pose init failed:", err);
       statusEl.textContent =
         "Pose error: " + (err.message || "Could not load pose model");
-      if (videoMetaReady && outfitsAllLoaded) {
+      if (videoMetaReady && outfitPreloadDone && trouserPreloadDone) {
         loopStarted = true;
         requestAnimationFrame(drawFrame);
       }
@@ -466,6 +643,7 @@
     return;
   }
 
+  preloadTrousers();
   startOutfitDiscovery();
   startCamera();
 })();

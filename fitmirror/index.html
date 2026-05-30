@@ -12,21 +12,41 @@
   <div id="ui-overlay">
     <p>FitMirror loading...</p>
     <div id="outfit-selector">
-      <button type="button" class="control-btn" onclick="prevOutfit()" aria-label="Previous outfit">←</button>
-      <span id="outfit-name">T-Shirt</span>
-      <button type="button" class="control-btn" onclick="nextOutfit()" aria-label="Next outfit">→</button>
+      <button type="button" class="control-btn" onclick="prevOutfit()" aria-label="Previous top">←</button>
+      <span id="outfit-name">Top</span>
+      <button type="button" class="control-btn" onclick="nextOutfit()" aria-label="Next top">→</button>
+    </div>
+    <div id="trouser-selector">
+      <button type="button" class="control-btn" onclick="prevTrouser()" aria-label="Previous trousers">←</button>
+      <span id="trouser-name">Jeans</span>
+      <button type="button" class="control-btn" onclick="nextTrouser()" aria-label="Next trousers">→</button>
     </div>
     <div id="position-controls">
+      <p class="control-panel-label">Top</p>
       <div class="scale-buttons">
-        <button type="button" class="control-btn" onclick="scaleOutfit('up')" aria-label="Scale up">+</button>
-        <button type="button" class="control-btn" onclick="scaleOutfit('down')" aria-label="Scale down">−</button>
+        <button type="button" class="control-btn" onclick="scaleOutfit('up')" aria-label="Scale top up">+</button>
+        <button type="button" class="control-btn" onclick="scaleOutfit('down')" aria-label="Scale top down">−</button>
       </div>
       <div class="dpad-grid">
-        <button type="button" class="control-btn dpad-up" onclick="moveOutfit('up')" aria-label="Move up">↑</button>
-        <button type="button" class="control-btn dpad-left" onclick="moveOutfit('left')" aria-label="Move left">←</button>
-        <button type="button" class="control-btn dpad-reset" onclick="resetOutfit()" aria-label="Reset position and scale">⟲</button>
-        <button type="button" class="control-btn dpad-right" onclick="moveOutfit('right')" aria-label="Move right">→</button>
-        <button type="button" class="control-btn dpad-down" onclick="moveOutfit('down')" aria-label="Move down">↓</button>
+        <button type="button" class="control-btn dpad-up" onclick="moveOutfit('up')" aria-label="Move top up">↑</button>
+        <button type="button" class="control-btn dpad-left" onclick="moveOutfit('left')" aria-label="Move top left">←</button>
+        <button type="button" class="control-btn dpad-reset" onclick="resetOutfit()" aria-label="Reset top">⟲</button>
+        <button type="button" class="control-btn dpad-right" onclick="moveOutfit('right')" aria-label="Move top right">→</button>
+        <button type="button" class="control-btn dpad-down" onclick="moveOutfit('down')" aria-label="Move top down">↓</button>
+      </div>
+    </div>
+    <div id="trouser-controls">
+      <p class="control-panel-label">Trousers</p>
+      <div class="scale-buttons">
+        <button type="button" class="control-btn" onclick="scaleTrouser('up')" aria-label="Scale trousers up">+</button>
+        <button type="button" class="control-btn" onclick="scaleTrouser('down')" aria-label="Scale trousers down">−</button>
+      </div>
+      <div class="dpad-grid">
+        <button type="button" class="control-btn dpad-up" onclick="moveTrouser('up')" aria-label="Move trousers up">↑</button>
+        <button type="button" class="control-btn dpad-left" onclick="moveTrouser('left')" aria-label="Move trousers left">←</button>
+        <button type="button" class="control-btn dpad-reset" onclick="resetTrouser()" aria-label="Reset trousers">⟲</button>
+        <button type="button" class="control-btn dpad-right" onclick="moveTrouser('right')" aria-label="Move trousers right">→</button>
+        <button type="button" class="control-btn dpad-down" onclick="moveTrouser('down')" aria-label="Move trousers down">↓</button>
       </div>
     </div>
   </div>

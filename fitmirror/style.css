@@ -47,7 +47,7 @@ body {
 #outfit-selector {
   position: fixed;
   left: 50%;
-  bottom: 6.5rem;
+  bottom: 7.25rem;
   transform: translateX(-50%);
   pointer-events: auto;
   display: flex;
@@ -59,22 +59,56 @@ body {
   backdrop-filter: blur(4px);
 }
 
-#outfit-name {
+#trouser-selector {
+  position: fixed;
+  left: 50%;
+  bottom: 5.5rem;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 999px;
+  backdrop-filter: blur(4px);
+}
+
+#outfit-name,
+#trouser-name {
   min-width: 150px;
   text-align: center;
   font-size: 0.95rem;
   font-weight: 500;
 }
 
-#position-controls {
+.control-panel-label {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.9;
+  margin-bottom: 0.4rem;
+}
+
+#position-controls,
+#trouser-controls {
   position: fixed;
-  right: 1rem;
   bottom: 1rem;
   pointer-events: auto;
   padding: 0.65rem;
   background: rgba(0, 0, 0, 0.45);
   border-radius: 10px;
   backdrop-filter: blur(4px);
+}
+
+#position-controls {
+  right: 1rem;
+}
+
+#trouser-controls {
+  left: 1rem;
 }
 
 .scale-buttons {
