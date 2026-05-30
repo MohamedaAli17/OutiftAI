@@ -52,6 +52,51 @@
       });
   }
 
+  function discoverFromDirectoryListing() {
+    return fetch("outfits/?" + Date.now())
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error("directory listing " + response.status);
+        }
+        return response.text();
+      })
+      .then(function (html) {
+        var list = [];
+        var seen = {};
+        var re = /href="([^"?#]+\.(?:png|jpg|jpeg|webp))"/gi;
+        var match;
+        while ((match = re.exec(html)) !== null) {
+          var file = decodeURIComponent(match[1]).replace(/^\.\//, "");
+          if (file.indexOf("/") !== -1) {
+            continue;
+          }
+          var key = file.toLowerCase();
+          if (seen[key]) {
+            continue;
+          }
+          seen[key] = true;
+          list.push({
+            name: nameFromFilename(file),
+            src: "outfits/" + file,
+          });
+        }
+        if (list.length === 0) {
+          throw new Error("no images in outfits/ listing");
+        }
+        console.log("Outfits found via folder listing:", list.length);
+        return list;
+      });
+  }
+
+  function discoverFromManifest() {
+    return fetch(OUTFIT_MANIFEST + "?t=" + Date.now()).then(function (response) {
+      if (!response.ok) {
+        throw new Error("manifest " + response.status);
+      }
+      return response.json();
+    });
+  }
+
   function discoverOutfits() {
     return fetch(OUTFIT_API)
       .then(function (response) {
@@ -60,17 +105,23 @@
         }
         return response.json();
       })
-      .catch(function (apiErr) {
-        console.log("Outfit API unavailable, using manifest.json:", apiErr.message);
-        return fetch(OUTFIT_MANIFEST + "?t=" + Date.now()).then(function (response) {
-          if (!response.ok) {
-            throw new Error("manifest " + response.status);
-          }
-          return response.json();
-        });
-      })
       .then(function (data) {
+        console.log("Outfits loaded from backend API");
         return normalizeOutfitList(data);
+      })
+      .catch(function (apiErr) {
+        console.log("Outfit API unavailable:", apiErr.message);
+        return discoverFromDirectoryListing()
+          .then(function (list) {
+            return normalizeOutfitList(list);
+          })
+          .catch(function (dirErr) {
+            console.log("Folder listing unavailable:", dirErr.message);
+            return discoverFromManifest().then(function (data) {
+              console.log("Outfits loaded from manifest.json");
+              return normalizeOutfitList(data);
+            });
+          });
       });
   }
 
@@ -95,7 +146,7 @@
         outfitNameEl.textContent = "No outfits";
       }
       statusEl.textContent =
-        "Camera active — add .png/.jpg images to outfits/ and refresh";
+        "No outfits loaded — run: py generate_manifest.py (in fitmirror/) then refresh";
     } else {
       updateOutfitLabel();
       if (failedSources.length > 0) {
