@@ -1,5 +1,5 @@
 (function () {
-  var OUTFIT_API = "http://127.0.0.1:8000/outfits";
+  var OUTFIT_API = "http://127.0.0.1:8000/api/outfits";
   var OUTFIT_MANIFEST = "outfits/manifest.json";
 
   var canvas = document.getElementById("main-canvas");
@@ -97,8 +97,18 @@
     });
   }
 
+  function outfitImageUrl(src) {
+    var slash = src.lastIndexOf("/");
+    if (slash === -1) {
+      return encodeURI(src);
+    }
+    return (
+      src.slice(0, slash + 1) + encodeURIComponent(src.slice(slash + 1))
+    );
+  }
+
   function discoverOutfits() {
-    return fetch(OUTFIT_API)
+    return fetch(OUTFIT_API, { cache: "no-store" })
       .then(function (response) {
         if (!response.ok) {
           throw new Error("API " + response.status);
@@ -106,7 +116,7 @@
         return response.json();
       })
       .then(function (data) {
-        console.log("Outfits loaded from backend API");
+        console.log("Outfits auto-scanned from server:", data.length);
         return normalizeOutfitList(data);
       })
       .catch(function (apiErr) {
@@ -146,7 +156,7 @@
         outfitNameEl.textContent = "No outfits";
       }
       statusEl.textContent =
-        "No outfits loaded — run: py generate_manifest.py (in fitmirror/) then refresh";
+        "No outfits — double-click START-FitMirror.bat, then refresh (or add images to outfits/)";
     } else {
       updateOutfitLabel();
       if (failedSources.length > 0) {
@@ -198,7 +208,7 @@
             finishOutfitPreload(loadedOutfits, loadedImages, failedSources);
           }
         };
-        img.src = outfits[index].src;
+        img.src = outfitImageUrl(outfits[index].src);
       })(i);
     }
 
@@ -232,7 +242,7 @@
           outfitNameEl.textContent = "No outfits";
         }
         statusEl.textContent =
-          "Camera starting — drop images in outfits/, run backend, then refresh";
+          "Camera on — double-click START-FitMirror.bat to auto-detect outfits";
         tryStartAnimationLoop();
       });
   }

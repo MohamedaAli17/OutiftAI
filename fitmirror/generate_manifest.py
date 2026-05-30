@@ -11,16 +11,20 @@ IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 SKIP_FILENAMES = {"manifest.json", "readme.txt", ".gitkeep"}
 
 
-def name_from_filename(filename: str) -> str:
+def name_from_filename(filename: str, index: int = 0) -> str:
     stem = Path(filename).stem
+    if len(stem) > 36 or re.search(r"^[A-Za-z0-9+/=_-]{40,}$", stem):
+        return f"Outfit {index + 1}"
     words = re.split(r"[-_\s]+", stem)
-    return " ".join(word.capitalize() for word in words if word)
+    label = " ".join(word.capitalize() for word in words if word)
+    return label if label else f"Outfit {index + 1}"
 
 
 def scan_outfit_files() -> list[dict[str, str]]:
     if not OUTFITS_DIR.is_dir():
         return []
     items = []
+    index = 0
     for path in sorted(OUTFITS_DIR.iterdir()):
         if not path.is_file():
             continue
@@ -29,8 +33,12 @@ def scan_outfit_files() -> list[dict[str, str]]:
         if path.suffix.lower() not in IMAGE_EXTENSIONS:
             continue
         items.append(
-            {"name": name_from_filename(path.name), "src": f"outfits/{path.name}"}
+            {
+                "name": name_from_filename(path.name, index),
+                "src": f"outfits/{path.name}",
+            }
         )
+        index += 1
     return items
 
 
