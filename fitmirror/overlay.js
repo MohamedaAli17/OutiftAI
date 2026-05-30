@@ -5,7 +5,16 @@ var firstOutfitDrawLogged = false;
 /**
  * Scales and draws a transparent outfit PNG anchored to the shoulders.
  */
-export function drawOutfit(ctx, landmarks, outfitImg, canvasW, canvasH, scaleFactor) {
+export function drawOutfit(
+  ctx,
+  landmarks,
+  outfitImg,
+  canvasW,
+  canvasH,
+  scaleFactor,
+  offsetX,
+  offsetY
+) {
   var left = landmarks[11];
   var right = landmarks[12];
   if (!left || !right || !outfitImg.naturalWidth) {
@@ -26,7 +35,7 @@ export function drawOutfit(ctx, landmarks, outfitImg, canvasW, canvasH, scaleFac
   var x = centerX - outfitW / 2;
   var y = shoulderY - outfitH * 0.08;
 
-  ctx.drawImage(outfitImg, x, y, outfitW, outfitH);
+  ctx.drawImage(outfitImg, x + offsetX, y + offsetY, outfitW, outfitH);
 
   if (!firstOutfitDrawLogged) {
     console.log("Drawing outfit at:", x, y, outfitW, outfitH);

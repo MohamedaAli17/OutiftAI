@@ -11,6 +11,8 @@
   var outfitLoaded = false;
   var loopStarted = false;
   var scaleFactor = 1.5;
+  var offsetX = 0;
+  var offsetY = 0;
 
   var outfitImg = new Image();
   outfitImg.onload = function () {
@@ -27,6 +29,44 @@
 
   // Debug shoulder/hip indices (BlazePose)
   var DEBUG_LANDMARKS = [11, 12, 23, 24];
+
+  function logOffset() {
+    console.log("Offset:", offsetX, offsetY);
+  }
+
+  function changeScale(delta) {
+    scaleFactor = Math.min(3.0, Math.max(0.5, scaleFactor + delta));
+    console.log("Scale factor:", scaleFactor);
+  }
+
+  window.moveOutfit = function (direction) {
+    if (direction === "up") {
+      offsetY -= 5;
+    } else if (direction === "down") {
+      offsetY += 5;
+    } else if (direction === "left") {
+      offsetX -= 5;
+    } else if (direction === "right") {
+      offsetX += 5;
+    }
+    logOffset();
+  };
+
+  window.resetOutfit = function () {
+    offsetX = 0;
+    offsetY = 0;
+    scaleFactor = 1.5;
+    console.log("Scale factor:", scaleFactor);
+    logOffset();
+  };
+
+  window.scaleOutfit = function (direction) {
+    if (direction === "up") {
+      changeScale(0.05);
+    } else if (direction === "down") {
+      changeScale(-0.05);
+    }
+  };
 
   function drawDebugDots(landmarks) {
     ctx.fillStyle = "red";
@@ -64,7 +104,9 @@
               outfitImg,
               canvas.width,
               canvas.height,
-              scaleFactor
+              scaleFactor,
+              offsetX,
+              offsetY
             );
           }
           drawDebugDots(landmarks);
@@ -136,11 +178,19 @@
 
   document.addEventListener("keydown", function (event) {
     if (event.key === "ArrowUp") {
-      scaleFactor = Math.min(3.0, scaleFactor + 0.05);
-      console.log("Scale factor:", scaleFactor);
+      event.preventDefault();
+      changeScale(0.05);
     } else if (event.key === "ArrowDown") {
-      scaleFactor = Math.max(0.5, scaleFactor - 0.05);
-      console.log("Scale factor:", scaleFactor);
+      event.preventDefault();
+      changeScale(-0.05);
+    } else if (event.key === "w" || event.key === "W") {
+      window.moveOutfit("up");
+    } else if (event.key === "s" || event.key === "S") {
+      window.moveOutfit("down");
+    } else if (event.key === "a" || event.key === "A") {
+      window.moveOutfit("left");
+    } else if (event.key === "d" || event.key === "D") {
+      window.moveOutfit("right");
     }
   });
 
