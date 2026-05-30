@@ -2,30 +2,82 @@
   var canvas = document.getElementById("main-canvas");
   var video = document.getElementById("webcam-video");
   var statusEl = document.querySelector("#ui-overlay p");
+  var outfitNameEl = document.getElementById("outfit-name");
   var ctx = canvas.getContext("2d");
   var firstFrameLogged = false;
   var poseLandmarker = null;
   var poseApi = null;
   var overlayApi = null;
   var videoMetaReady = false;
-  var outfitLoaded = false;
+  var outfitsAllLoaded = false;
+  var outfitLoadCount = 0;
   var loopStarted = false;
   var scaleFactor = 1.5;
   var offsetX = 0;
   var offsetY = 0;
+  var currentOutfitIndex = 0;
 
-  var outfitImg = new Image();
-  outfitImg.onload = function () {
-    outfitLoaded = true;
-    console.log("Outfit image loaded");
-    tryStartAnimationLoop();
+  var outfits = [
+    { name: "T-Shirt", src: "outfits/tshirt.png" },
+    { name: "Hoodie", src: "outfits/hoodie.png" },
+    { name: "Jacket", src: "outfits/jacket.png" },
+  ];
+
+  var outfitImages = [];
+
+  function resetOutfitAdjustments() {
+    offsetX = 0;
+    offsetY = 0;
+    scaleFactor = 1.5;
+  }
+
+  function updateOutfitLabel() {
+    if (outfitNameEl) {
+      outfitNameEl.textContent = outfits[currentOutfitIndex].name;
+    }
+  }
+
+  function logOutfitSwitch() {
+    console.log("Switched to outfit:", outfits[currentOutfitIndex].name);
+  }
+
+  window.nextOutfit = function () {
+    currentOutfitIndex = (currentOutfitIndex + 1) % outfits.length;
+    resetOutfitAdjustments();
+    updateOutfitLabel();
+    logOutfitSwitch();
   };
-  outfitImg.onerror = function () {
-    console.error("Outfit image failed to load");
-    statusEl.textContent =
-      "Outfit error: could not load outfits/tshirt.png";
+
+  window.prevOutfit = function () {
+    currentOutfitIndex =
+      (currentOutfitIndex - 1 + outfits.length) % outfits.length;
+    resetOutfitAdjustments();
+    updateOutfitLabel();
+    logOutfitSwitch();
   };
-  outfitImg.src = "outfits/tshirt.png";
+
+  for (var i = 0; i < outfits.length; i++) {
+    (function (index) {
+      var img = new Image();
+      img.onload = function () {
+        outfitLoadCount += 1;
+        console.log("Outfit image loaded:", outfits[index].name);
+        if (outfitLoadCount === outfits.length) {
+          outfitsAllLoaded = true;
+          tryStartAnimationLoop();
+        }
+      };
+      img.onerror = function () {
+        console.error("Outfit image failed to load:", outfits[index].src);
+        statusEl.textContent =
+          "Outfit error: could not load " + outfits[index].src;
+      };
+      img.src = outfits[index].src;
+      outfitImages[index] = img;
+    })(i);
+  }
+
+  updateOutfitLabel();
 
   // Debug shoulder/hip indices (BlazePose)
   var DEBUG_LANDMARKS = [11, 12, 23, 24];
@@ -53,9 +105,7 @@
   };
 
   window.resetOutfit = function () {
-    offsetX = 0;
-    offsetY = 0;
-    scaleFactor = 1.5;
+    resetOutfitAdjustments();
     console.log("Scale factor:", scaleFactor);
     logOffset();
   };
@@ -97,11 +147,11 @@
           performance.now()
         );
         if (landmarks) {
-          if (overlayApi) {
+          if (overlayApi && outfitImages[currentOutfitIndex]) {
             overlayApi.drawOutfit(
               ctx,
               landmarks,
-              outfitImg,
+              outfitImages[currentOutfitIndex],
               canvas.width,
               canvas.height,
               scaleFactor,
@@ -121,7 +171,7 @@
       loopStarted ||
       !videoMetaReady ||
       !poseLandmarker ||
-      !outfitLoaded
+      !outfitsAllLoaded
     ) {
       return;
     }
@@ -136,7 +186,7 @@
       .then(function (stream) {
         video.srcObject = stream;
         console.log("Camera started");
-        statusEl.textContent = "FitMirror — loading pose & outfit...";
+        statusEl.textContent = "FitMirror — loading pose & outfits...";
 
         video.addEventListener("loadedmetadata", function onMeta() {
           video.removeEventListener("loadedmetadata", onMeta);
@@ -170,7 +220,7 @@
       console.error("Pose init failed:", err);
       statusEl.textContent =
         "Pose error: " + (err.message || "Could not load pose model");
-      if (videoMetaReady && outfitLoaded) {
+      if (videoMetaReady && outfitsAllLoaded) {
         loopStarted = true;
         requestAnimationFrame(drawFrame);
       }

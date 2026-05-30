@@ -35,13 +35,35 @@ body {
 #ui-overlay > p {
   position: fixed;
   left: 50%;
-  bottom: 1.5rem;
+  top: 1rem;
   transform: translateX(-50%);
   padding: 0.75rem 1.25rem;
   background: rgba(0, 0, 0, 0.55);
   border-radius: 8px;
   font-size: 0.95rem;
   text-align: center;
+}
+
+#outfit-selector {
+  position: fixed;
+  left: 50%;
+  bottom: 6.5rem;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 999px;
+  backdrop-filter: blur(4px);
+}
+
+#outfit-name {
+  min-width: 150px;
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 500;
 }
 
 #position-controls {
@@ -69,7 +91,7 @@ body {
   gap: 0.35rem;
 }
 
-#position-controls button {
+.control-btn {
   width: 2.5rem;
   height: 2.5rem;
   border: 1px solid rgba(255, 255, 255, 0.35);
@@ -82,7 +104,7 @@ body {
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-#position-controls button:hover {
+.control-btn:hover {
   background: rgba(255, 255, 255, 0.95);
   color: #111;
   border-color: rgba(255, 255, 255, 0.95);

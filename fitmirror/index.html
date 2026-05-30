@@ -11,17 +11,22 @@
   <video id="webcam-video" autoplay playsinline muted hidden></video>
   <div id="ui-overlay">
     <p>FitMirror loading...</p>
+    <div id="outfit-selector">
+      <button type="button" class="control-btn" onclick="prevOutfit()" aria-label="Previous outfit">←</button>
+      <span id="outfit-name">T-Shirt</span>
+      <button type="button" class="control-btn" onclick="nextOutfit()" aria-label="Next outfit">→</button>
+    </div>
     <div id="position-controls">
       <div class="scale-buttons">
-        <button type="button" onclick="scaleOutfit('up')" aria-label="Scale up">+</button>
-        <button type="button" onclick="scaleOutfit('down')" aria-label="Scale down">−</button>
+        <button type="button" class="control-btn" onclick="scaleOutfit('up')" aria-label="Scale up">+</button>
+        <button type="button" class="control-btn" onclick="scaleOutfit('down')" aria-label="Scale down">−</button>
       </div>
       <div class="dpad-grid">
-        <button type="button" class="dpad-up" onclick="moveOutfit('up')" aria-label="Move up">↑</button>
-        <button type="button" class="dpad-left" onclick="moveOutfit('left')" aria-label="Move left">←</button>
-        <button type="button" class="dpad-reset" onclick="resetOutfit()" aria-label="Reset position and scale">⟲</button>
-        <button type="button" class="dpad-right" onclick="moveOutfit('right')" aria-label="Move right">→</button>
-        <button type="button" class="dpad-down" onclick="moveOutfit('down')" aria-label="Move down">↓</button>
+        <button type="button" class="control-btn dpad-up" onclick="moveOutfit('up')" aria-label="Move up">↑</button>
+        <button type="button" class="control-btn dpad-left" onclick="moveOutfit('left')" aria-label="Move left">←</button>
+        <button type="button" class="control-btn dpad-reset" onclick="resetOutfit()" aria-label="Reset position and scale">⟲</button>
+        <button type="button" class="control-btn dpad-right" onclick="moveOutfit('right')" aria-label="Move right">→</button>
+        <button type="button" class="control-btn dpad-down" onclick="moveOutfit('down')" aria-label="Move down">↓</button>
       </div>
     </div>
   </div>
