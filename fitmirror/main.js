@@ -10,6 +10,7 @@
   var videoMetaReady = false;
   var outfitLoaded = false;
   var loopStarted = false;
+  var scaleFactor = 1.5;
 
   var outfitImg = new Image();
   outfitImg.onload = function () {
@@ -62,7 +63,8 @@
               landmarks,
               outfitImg,
               canvas.width,
-              canvas.height
+              canvas.height,
+              scaleFactor
             );
           }
           drawDebugDots(landmarks);
@@ -131,6 +133,16 @@
         requestAnimationFrame(drawFrame);
       }
     });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "ArrowUp") {
+      scaleFactor = Math.min(3.0, scaleFactor + 0.05);
+      console.log("Scale factor:", scaleFactor);
+    } else if (event.key === "ArrowDown") {
+      scaleFactor = Math.max(0.5, scaleFactor - 0.05);
+      console.log("Scale factor:", scaleFactor);
+    }
+  });
 
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     statusEl.textContent =
