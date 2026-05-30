@@ -1,0 +1,16 @@
+# FitMirror project rules
+
+## Git workflow (required)
+After every coding task that changes project files:
+1. Run git commands from repo root: `C:\Users\moham\Desktop\OutfitAI\OutiftAI`
+2. `git add` only relevant project files (never `backend/.env` or secrets)
+3. Commit with a clear message describing why
+4. `git push origin main`
+
+Do not skip push unless the user explicitly says not to push for that task, or push fails (report the error).
+
+## Stack and structure
+- Vanilla JS only; no React/Vue/npm
+- MediaPipe from CDN; Gemini key only in `backend/.env`
+- One responsibility per JS file; console.log at key steps
+- Touch only files relevant to the task; ask before structural changes
