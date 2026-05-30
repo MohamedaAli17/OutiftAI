@@ -1,4 +1,7 @@
 (function () {
+  var OUTFIT_API = "http://127.0.0.1:8000/outfits";
+  var OUTFIT_MANIFEST = "outfits/manifest.json";
+
   var canvas = document.getElementById("main-canvas");
   var video = document.getElementById("webcam-video");
   var statusEl = document.querySelector("#ui-overlay p");
@@ -17,13 +20,118 @@
   var offsetY = 0;
   var currentOutfitIndex = 0;
 
-  var outfits = [
-    { name: "T-Shirt", src: "outfits/tshirt.png" },
-    { name: "Hoodie", src: "outfits/hoodie.png" },
-    { name: "Jacket", src: "outfits/jacket.png" },
-  ];
-
+  var outfits = [];
   var outfitImages = [];
+
+  function nameFromFilename(filename) {
+    var base = filename.replace(/\.[^.]+$/, "");
+    return base
+      .split(/[-_\s]+/)
+      .filter(Boolean)
+      .map(function (word) {
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      })
+      .join(" ");
+  }
+
+  function normalizeOutfitList(raw) {
+    if (!Array.isArray(raw)) {
+      return [];
+    }
+    return raw
+      .filter(function (item) {
+        return item && item.src;
+      })
+      .map(function (item) {
+        var src = item.src;
+        if (src.indexOf("outfits/") !== 0) {
+          src = "outfits/" + src.replace(/^\.?\//, "");
+        }
+        var name = item.name || nameFromFilename(src);
+        return { name: name, src: src };
+      });
+  }
+
+  function discoverOutfits() {
+    return fetch(OUTFIT_API)
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error("API " + response.status);
+        }
+        return response.json();
+      })
+      .catch(function (apiErr) {
+        console.log("Outfit API unavailable, using manifest.json:", apiErr.message);
+        return fetch(OUTFIT_MANIFEST + "?t=" + Date.now()).then(function (response) {
+          if (!response.ok) {
+            throw new Error("manifest " + response.status);
+          }
+          return response.json();
+        });
+      })
+      .then(function (data) {
+        return normalizeOutfitList(data);
+      });
+  }
+
+  function preloadOutfits() {
+    outfitImages = [];
+    outfitLoadCount = 0;
+    outfitsAllLoaded = false;
+
+    if (outfits.length === 0) {
+      console.log("No outfit images found in outfits/");
+      if (outfitNameEl) {
+        outfitNameEl.textContent = "No outfits";
+      }
+      outfitsAllLoaded = true;
+      tryStartAnimationLoop();
+      return;
+    }
+
+    updateOutfitLabel();
+
+    for (var i = 0; i < outfits.length; i++) {
+      (function (index) {
+        var img = new Image();
+        img.onload = function () {
+          outfitLoadCount += 1;
+          console.log("Outfit image loaded:", outfits[index].name);
+          if (outfitLoadCount === outfits.length) {
+            outfitsAllLoaded = true;
+            tryStartAnimationLoop();
+          }
+        };
+        img.onerror = function () {
+          console.error("Outfit image failed to load:", outfits[index].src);
+          statusEl.textContent =
+            "Outfit error: could not load " + outfits[index].src;
+        };
+        img.src = outfits[index].src;
+        outfitImages[index] = img;
+      })(i);
+    }
+  }
+
+  function startOutfitDiscovery() {
+    statusEl.textContent = "FitMirror — scanning outfits...";
+    discoverOutfits()
+      .then(function (list) {
+        outfits = list;
+        console.log(
+          "Outfits discovered:",
+          outfits.map(function (o) {
+            return o.name + " (" + o.src + ")";
+          }).join(", ") || "(none)"
+        );
+        preloadOutfits();
+      })
+      .catch(function (err) {
+        console.error("Outfit discovery failed:", err);
+        statusEl.textContent =
+          "Outfit error: add PNGs to outfits/ and run: py -m uvicorn main:app --reload --port 8000 (from backend/)";
+      });
+  }
 
   function resetOutfitAdjustments() {
     offsetX = 0;
@@ -32,9 +140,14 @@
   }
 
   function updateOutfitLabel() {
-    if (outfitNameEl) {
-      outfitNameEl.textContent = outfits[currentOutfitIndex].name;
+    if (!outfitNameEl) {
+      return;
     }
+    if (outfits.length === 0) {
+      outfitNameEl.textContent = "No outfits";
+      return;
+    }
+    outfitNameEl.textContent = outfits[currentOutfitIndex].name;
   }
 
   function logOutfitSwitch() {
@@ -42,6 +155,9 @@
   }
 
   window.nextOutfit = function () {
+    if (outfits.length === 0) {
+      return;
+    }
     currentOutfitIndex = (currentOutfitIndex + 1) % outfits.length;
     resetOutfitAdjustments();
     updateOutfitLabel();
@@ -49,35 +165,15 @@
   };
 
   window.prevOutfit = function () {
+    if (outfits.length === 0) {
+      return;
+    }
     currentOutfitIndex =
       (currentOutfitIndex - 1 + outfits.length) % outfits.length;
     resetOutfitAdjustments();
     updateOutfitLabel();
     logOutfitSwitch();
   };
-
-  for (var i = 0; i < outfits.length; i++) {
-    (function (index) {
-      var img = new Image();
-      img.onload = function () {
-        outfitLoadCount += 1;
-        console.log("Outfit image loaded:", outfits[index].name);
-        if (outfitLoadCount === outfits.length) {
-          outfitsAllLoaded = true;
-          tryStartAnimationLoop();
-        }
-      };
-      img.onerror = function () {
-        console.error("Outfit image failed to load:", outfits[index].src);
-        statusEl.textContent =
-          "Outfit error: could not load " + outfits[index].src;
-      };
-      img.src = outfits[index].src;
-      outfitImages[index] = img;
-    })(i);
-  }
-
-  updateOutfitLabel();
 
   // Debug shoulder/hip indices (BlazePose)
   var DEBUG_LANDMARKS = [11, 12, 23, 24];
@@ -147,7 +243,11 @@
           performance.now()
         );
         if (landmarks) {
-          if (overlayApi && outfitImages[currentOutfitIndex]) {
+          if (
+            overlayApi &&
+            outfits.length > 0 &&
+            outfitImages[currentOutfitIndex]
+          ) {
             overlayApi.drawOutfit(
               ctx,
               landmarks,
@@ -250,5 +350,6 @@
     return;
   }
 
+  startOutfitDiscovery();
   startCamera();
 })();
