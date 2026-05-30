@@ -4,6 +4,27 @@
   var statusEl = document.querySelector("#ui-overlay p");
   var ctx = canvas.getContext("2d");
   var firstFrameLogged = false;
+  var poseLandmarker = null;
+  var poseApi = null;
+  var videoMetaReady = false;
+  var loopStarted = false;
+
+  // Debug shoulder/hip indices (BlazePose)
+  var DEBUG_LANDMARKS = [11, 12, 23, 24];
+
+  function drawDebugDots(landmarks) {
+    ctx.fillStyle = "red";
+    for (var i = 0; i < DEBUG_LANDMARKS.length; i++) {
+      var idx = DEBUG_LANDMARKS[i];
+      var point = landmarks[idx];
+      if (!point) continue;
+      var x = point.x * canvas.width;
+      var y = point.y * canvas.height;
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
 
   function drawFrame() {
     if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
@@ -12,7 +33,26 @@
         console.log("Drawing frame");
         firstFrameLogged = true;
       }
+
+      if (poseLandmarker && poseApi) {
+        var landmarks = poseApi.detectPose(
+          poseLandmarker,
+          video,
+          performance.now()
+        );
+        if (landmarks) {
+          drawDebugDots(landmarks);
+        }
+      }
     }
+    requestAnimationFrame(drawFrame);
+  }
+
+  function tryStartAnimationLoop() {
+    if (loopStarted || !videoMetaReady || !poseLandmarker) {
+      return;
+    }
+    loopStarted = true;
     requestAnimationFrame(drawFrame);
   }
 
@@ -22,12 +62,14 @@
       .then(function (stream) {
         video.srcObject = stream;
         console.log("Camera started");
+        statusEl.textContent = "FitMirror — pose loading...";
 
         video.addEventListener("loadedmetadata", function onMeta() {
           video.removeEventListener("loadedmetadata", onMeta);
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
-          requestAnimationFrame(drawFrame);
+          videoMetaReady = true;
+          tryStartAnimationLoop();
         });
       })
       .catch(function (err) {
@@ -37,8 +79,29 @@
       });
   }
 
+  import("./pose.js")
+    .then(function (poseModule) {
+      poseApi = poseModule;
+      return poseModule.initPose();
+    })
+    .then(function (landmarker) {
+      poseLandmarker = landmarker;
+      statusEl.textContent = "FitMirror — tracking active";
+      tryStartAnimationLoop();
+    })
+    .catch(function (err) {
+      console.error("Pose init failed:", err);
+      statusEl.textContent =
+        "Pose error: " + (err.message || "Could not load pose model");
+      if (videoMetaReady) {
+        loopStarted = true;
+        requestAnimationFrame(drawFrame);
+      }
+    });
+
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    statusEl.textContent = "Camera error: getUserMedia is not supported in this browser";
+    statusEl.textContent =
+      "Camera error: getUserMedia is not supported in this browser";
     return;
   }
 
